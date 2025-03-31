@@ -1,4 +1,5 @@
 #include <string.h>
+#include <inttypes.h>
 #include "xiao_mmwave.h"
 
 #include "freertos/queue.h"
@@ -93,7 +94,7 @@ static uint8_t *send_command(const uint16_t command_word, uint8_t *data, size_t 
         // get rid of size and command word
         memcpy(response, current_command.response + 4, data_size);
 
-        ESP_LOGI(TAG, "Received response (%lu bytes):", data_size);
+        ESP_LOGI(TAG, "Received response (%" PRIuPTR " bytes):", data_size);
         ESP_LOG_BUFFER_HEXDUMP(TAG, response, data_size, ESP_LOG_INFO);
 
         memset(&current_command, 0, sizeof(current_command));

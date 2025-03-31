@@ -4,3 +4,7 @@ description: "ESP-IDF component for the 24GHz mmWave Sensor for XIAO"
 repository: "https://github.com/cichacz"
 dependencies:
   idf: ">=5.4.0"
+files:
+  exclude:
+    - "test"
+    - "test_app"
