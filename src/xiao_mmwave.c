@@ -164,7 +164,7 @@ static void uart_event_task(void *arg)
                     status_data.moving_target_energy = data[5];
                     status_data.stationary_target_distance = data[6] | (data[7] << 8);
                     status_data.stationary_target_energy = data[8];
-                    status_data.detection_distance = data[9] | (data[10] << 8);
+                    status_data.target_distance = data[9] | (data[10] << 8);
 
                     if (status_data.radar_mode == 1)
                     {
@@ -209,8 +209,9 @@ static esp_err_t enable_config_mode()
     uint8_t command_value[] = {0x01, 0x00};
 
     uint8_t *response = send_command(command_word, command_value, 2);
-
-    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    free(response);
+    return result;
 }
 
 static esp_err_t disable_config_mode()
@@ -219,8 +220,9 @@ static esp_err_t disable_config_mode()
     uint8_t command_value[] = {};
 
     uint8_t *response = send_command(command_word, command_value, 0);
-
-    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    free(response);
+    return result;
 }
 
 static esp_err_t reboot_sensor()
@@ -231,8 +233,9 @@ static esp_err_t reboot_sensor()
     uint8_t command_value[] = {};
 
     uint8_t *response = send_command(command_word, command_value, 0);
-
-    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    free(response);
+    return result;
 }
 
 static esp_err_t set_detection_resolution(uint8_t resolution)
@@ -246,8 +249,9 @@ static esp_err_t set_detection_resolution(uint8_t resolution)
     uint8_t command_value[] = {resolution, 0x00};
 
     uint8_t *response = send_command(command_word, command_value, 2);
-
-    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    free(response);
+    return result;
 }
 
 /* Initialization functions */
@@ -295,10 +299,12 @@ esp_err_t xiao_mmwave_set_detection_distance(uint8_t distance, uint8_t times)
     command_value[17] = (times >> 24) & 0xFF;
 
     uint8_t *response = send_command(command_word, command_value, 18);
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    free(response);
 
     ESP_RETURN_ON_ERROR(disable_config_mode(), TAG, "Failed to exit config mode");
 
-    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    return result;
 }
 
 uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance)
@@ -310,14 +316,16 @@ uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance)
     uint8_t command_value[] = {};
 
     uint8_t *response = send_command(command_word, command_value, 0);
-
-    if (response == NULL || response[0] == 1)
-    {
-        return ESP_FAIL;
-    }
-
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
     // FIXME make it prettier
     uint8_t resolution = response[2] == 0 ? 75 : 20;
+    free(response);
+
+    if (result != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to get detection resolution");
+        return ESP_FAIL;
+    }
 
     if (distance > 160 && resolution == 20)
     {
@@ -335,6 +343,50 @@ uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance)
     return resolution;
 }
 
+radar_config_t xiao_mmwave_get_configuration()
+{
+    ESP_LOGI(TAG, "Getting radar configuration...");
+    if (enable_config_mode() != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to enter config mode");
+        return (radar_config_t){0};
+    }
+
+    uint16_t command_word = 0x61;
+    uint8_t command_value[] = {};
+
+    uint8_t *response = send_command(command_word, command_value, 0);
+
+    if (response == NULL || response[0] == 1)
+    {
+        free(response);
+        return (radar_config_t){0};
+    }
+
+    radar_config_t config_data;
+    memset(&config_data, 0, sizeof(radar_config_t));
+
+    // response[1] is a 0x0 from status
+    // response[2] is a 0xAA head
+    config_data.detection_distance = response[3];
+    config_data.moving_target_detection_distance = response[4];
+    config_data.stationary_target_detection_distance = response[5];
+    memcpy(config_data.moving_sensitivity, response + 6, 9);
+    memcpy(config_data.stationary_sensitivity, response + 15, 9);
+    config_data.unoccupied_duration = response[24] | (response[25] << 8);
+
+    free(response);
+
+    if (disable_config_mode() != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to exit config mode");
+        // we may have some data but can't say it's valid at this point
+        return (radar_config_t){0};
+    }
+
+    return config_data;
+}
+
 esp_err_t xiao_mmwave_set_bluettoth_state(bool enabled)
 {
     ESP_LOGI(TAG, "Setting bluetooth state to %s...", enabled ? "enabled" : "disabled");
@@ -349,8 +401,10 @@ esp_err_t xiao_mmwave_set_bluettoth_state(bool enabled)
     }
 
     uint8_t *response = send_command(command_word, command_value, 2);
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    free(response);
 
     ESP_RETURN_ON_ERROR(reboot_sensor(), TAG, "Failed to reboot sensor");
 
-    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    return result;
 }

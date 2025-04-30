@@ -36,7 +36,7 @@ Initialize the sensor. The only thing that it needs is the callback for status u
 ```C
 void sensor_status_handler(radar_status_t *status)
 {
-    ESP_LOGD(TAG, "Read occupancy sensor status: %d, distance: %d, moving distance: %d, moving energy: %d, stationary distance: %d, stationary energy: %d", status->target_status, status->detection_distance, status->moving_target_distance, status->moving_target_energy, status->stationary_target_distance, status->stationary_target_energy);
+    ESP_LOGD(TAG, "Read occupancy sensor status: %d, distance: %d, moving distance: %d, moving energy: %d, stationary distance: %d, stationary energy: %d", status->target_status, status->target_distance, status->moving_target_distance, status->moving_target_energy, status->stationary_target_distance, status->stationary_target_energy);
 }
 
 void app_main(void)

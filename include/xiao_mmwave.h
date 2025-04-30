@@ -29,10 +29,20 @@ typedef struct radar_status_s
     uint8_t moving_target_energy;
     uint16_t stationary_target_distance;
     uint8_t stationary_target_energy;
-    uint16_t detection_distance;
+    uint16_t target_distance;
     uint8_t radar_move_power[9];
     uint8_t radar_static_power[9];
 } radar_status_t;
+
+typedef struct radar_config_s
+{
+    uint8_t detection_distance;
+    uint8_t moving_target_detection_distance;
+    uint8_t stationary_target_detection_distance;
+    uint8_t moving_sensitivity[9];
+    uint8_t stationary_sensitivity[9];
+    uint16_t unoccupied_duration;
+} radar_config_t;
 
 typedef void (*StatusFunction_t)(radar_status_t *status);
 
@@ -43,6 +53,7 @@ extern "C"
 
     /* Initialization functions */
     esp_err_t xiao_mmwave_init(StatusFunction_t cb);
+    radar_config_t xiao_mmwave_get_configuration();
 
     esp_err_t xiao_mmwave_set_detection_distance(uint8_t gate, uint8_t times);
 
