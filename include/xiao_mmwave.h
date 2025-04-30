@@ -1,6 +1,9 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 
+#ifndef XIAO_MMWAVE_H
+#define XIAO_MMWAVE_H 1
+
 #define BUFFER_SIZE 256
 
 // UART port and configuration.
@@ -64,3 +67,5 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* XIAO_MMWAVE_H */
