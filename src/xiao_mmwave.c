@@ -223,11 +223,23 @@ static esp_err_t disable_config_mode()
     return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
 }
 
+static esp_err_t reboot_sensor()
+{
+    ESP_LOGI(TAG, "Rebooting sensor...");
+
+    uint16_t command_word = 0xA3;
+    uint8_t command_value[] = {};
+
+    uint8_t *response = send_command(command_word, command_value, 0);
+
+    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+}
+
 static esp_err_t set_detection_resolution(uint8_t resolution)
 {
     if (resolution > 1)
     {
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
 
     uint16_t command_word = 0xAA;
@@ -261,6 +273,13 @@ esp_err_t xiao_mmwave_init(StatusFunction_t cb)
 
 esp_err_t xiao_mmwave_set_detection_distance(uint8_t distance, uint8_t times)
 {
+    if (distance < 1 || distance > SENSOR_MAX_GATE)
+    {
+        ESP_LOGE(TAG, "Invalid distance gate value: %d", distance);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    ESP_LOGI(TAG, "Setting detection distance to %d gate and unoccupied interval to %d s...", distance, times);
     ESP_RETURN_ON_ERROR(enable_config_mode(), TAG, "Failed to enter config mode");
 
     uint16_t command_word = 0x60;
@@ -284,6 +303,7 @@ esp_err_t xiao_mmwave_set_detection_distance(uint8_t distance, uint8_t times)
 
 uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance)
 {
+    ESP_LOGI(TAG, "Getting detection resolution...");
     ESP_RETURN_ON_ERROR(enable_config_mode(), TAG, "Failed to enter config mode");
 
     uint16_t command_word = 0xAB;
@@ -313,4 +333,24 @@ uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance)
     ESP_RETURN_ON_ERROR(disable_config_mode(), TAG, "Failed to exit config mode");
 
     return resolution;
+}
+
+esp_err_t xiao_mmwave_set_bluettoth_state(bool enabled)
+{
+    ESP_LOGI(TAG, "Setting bluetooth state to %s...", enabled ? "enabled" : "disabled");
+    ESP_RETURN_ON_ERROR(enable_config_mode(), TAG, "Failed to enter config mode");
+
+    uint16_t command_word = 0xA4;
+    uint8_t command_value[] = {0x00, 0x00};
+
+    if (enabled)
+    {
+        command_value[0] = 0x01;
+    }
+
+    uint8_t *response = send_command(command_word, command_value, 2);
+
+    ESP_RETURN_ON_ERROR(reboot_sensor(), TAG, "Failed to reboot sensor");
+
+    return response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
 }

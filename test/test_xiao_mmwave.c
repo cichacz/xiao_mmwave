@@ -11,6 +11,9 @@ QueueHandle_t mock_queue;
 TaskHandle_t task_handle;
 uart_event_t event;
 
+static uint8_t enable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
+static uint8_t disable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
+
 void sensor_init(void);
 void sensor_driver_value_update(radar_status_t *status);
 void assert_uart_event(uint8_t *frame_data, size_t frame_data_size);
@@ -21,6 +24,7 @@ BaseType_t prepare_for_command(UBaseType_t uxIndexToWaitOn, uint32_t ulBitsToCle
 int detection_distance_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
 int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
 int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
+int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
 int radar_status_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
 
 static const char *status_to_string(target_status_t status)
@@ -48,13 +52,13 @@ void setUp(void)
     xQueueReceive_Stub(queue_event_gen);
 }
 
-TEST_CASE("init", "[xiao_mmwave]")
+TEST_CASE("test_sensor_init", "[xiao_mmwave]")
 {
     event.type = UART_BREAK;
     sensor_init();
 }
 
-TEST_CASE("radar status", "[xiao_mmwave]")
+TEST_CASE("test_sensor_status_reporting", "[xiao_mmwave]")
 {
     uart_read_bytes_Stub(radar_status_payload);
 
@@ -63,13 +67,11 @@ TEST_CASE("radar status", "[xiao_mmwave]")
     sensor_init();
 }
 
-TEST_CASE("set_detection_distance", "[xiao_mmwave]")
+TEST_CASE("test_xiao_mmwave_set_detection_distance", "[xiao_mmwave]")
 {
     // values from the documentation
     uint8_t gate = 8;
     uint8_t times = 5;
-    uint8_t enable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    uint8_t disable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
     uint8_t detection_distance_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x14, 0x00, 0x60, 0x00, 0x00, 0x00, gate, 0x00, 0x00, 0x00, 0x01, 0x00, gate, 0x00, 0x00, 0x00, 0x02, 0x00, times, 0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01};
 
     xTaskGenericNotifyWait_AddCallback(prepare_for_command);
@@ -82,11 +84,9 @@ TEST_CASE("set_detection_distance", "[xiao_mmwave]")
     TEST_ASSERT_EQUAL(ESP_OK, xiao_mmwave_set_detection_distance(gate, times));
 }
 
-TEST_CASE("get_detection_resolution long", "[xiao_mmwave]")
+TEST_CASE("test_xiao_mmwave_get_detection_resolution_long_distance", "[xiao_mmwave]")
 {
     // values from the documentation
-    uint8_t enable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    uint8_t disable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
     uint8_t get_detection_resolution_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xAB, 0x00, 0x04, 0x03, 0x02, 0x01};
     uint8_t set_detection_resolution_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01};
 
@@ -101,11 +101,9 @@ TEST_CASE("get_detection_resolution long", "[xiao_mmwave]")
     TEST_ASSERT_EQUAL_UINT8(75, xiao_mmwave_get_detection_resolution(300));
 }
 
-TEST_CASE("get_detection_resolution short", "[xiao_mmwave]")
+TEST_CASE("test_xiao_mmwave_get_detection_resolution_short_distance", "[xiao_mmwave]")
 {
     // values from the documentation
-    uint8_t enable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    uint8_t disable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
     uint8_t get_detection_resolution_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xAB, 0x00, 0x04, 0x03, 0x02, 0x01};
 
     xTaskGenericNotifyWait_AddCallback(prepare_for_command);
@@ -117,6 +115,22 @@ TEST_CASE("get_detection_resolution short", "[xiao_mmwave]")
     assert_uart_event(disable_config_frame, sizeof(disable_config_frame));
 
     TEST_ASSERT_EQUAL_UINT8(20, xiao_mmwave_get_detection_resolution(100));
+}
+
+TEST_CASE("test_xiao_mmwave_set_bluettoth_state", "[xiao_mmwave]")
+{
+    // values from the documentation
+    uint8_t bluetooth_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xA4, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
+    uint8_t reboot_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xA3, 0x00, 0x04, 0x03, 0x02, 0x01};
+
+    xTaskGenericNotifyWait_AddCallback(prepare_for_command);
+    uart_read_bytes_Stub(bluetooth_event_payload);
+
+    assert_uart_event(enable_config_frame, sizeof(enable_config_frame));
+    assert_uart_event(bluetooth_frame, sizeof(bluetooth_frame));
+    assert_uart_event(reboot_frame, sizeof(reboot_frame));
+
+    TEST_ASSERT_EQUAL(ESP_OK, xiao_mmwave_set_bluettoth_state(true));
 }
 
 void sensor_init(void)
@@ -286,6 +300,37 @@ int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, 
     uint8_t data[] = {0xFD, 0xFC, 0xFB, 0xFA,
                       0x04, 0x00,
                       0xAA, 0x01, 0x00, 0x00,
+                      0x04, 0x03, 0x02, 0x01};
+    memcpy(buf, &data, sizeof(data));
+
+    return sizeof(data);
+}
+
+int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, TickType_t ticks_to_wait, int cmock_num_calls)
+{
+    // after each response we have to break loop and start it again before next request
+    event.type = UART_BREAK;
+
+    if (event_num == 1)
+    {
+        return config_event_payload(buf);
+    }
+
+    if (event_num == 3)
+    {
+        // we're not exiting config mode here but doing reboot instead
+        uint8_t data[] = {0xFD, 0xFC, 0xFB, 0xFA,
+                          0x04, 0x00,
+                          0xA3, 0x01, 0x00, 0x00,
+                          0x04, 0x03, 0x02, 0x01};
+        memcpy(buf, &data, sizeof(data));
+
+        return sizeof(data);
+    }
+
+    uint8_t data[] = {0xFD, 0xFC, 0xFB, 0xFA,
+                      0x04, 0x00,
+                      0xA4, 0x01, 0x00, 0x00,
                       0x04, 0x03, 0x02, 0x01};
     memcpy(buf, &data, sizeof(data));
 

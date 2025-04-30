@@ -9,6 +9,8 @@
 #define UART_TX_PIN (GPIO_NUM_21)
 #define UART_RX_PIN (GPIO_NUM_2)
 
+#define SENSOR_MAX_GATE 8
+
 /* Enumerations for target and command statuses */
 typedef enum target_status_e
 {
@@ -45,6 +47,8 @@ extern "C"
     esp_err_t xiao_mmwave_set_detection_distance(uint8_t gate, uint8_t times);
 
     uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance);
+
+    esp_err_t xiao_mmwave_set_bluettoth_state(bool enabled);
 
 #ifdef __cplusplus
 }
