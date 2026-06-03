@@ -39,6 +39,7 @@ typedef struct radar_status_s
 
 typedef struct radar_config_s
 {
+    uint8_t detection_resolution;
     uint8_t detection_distance;
     uint8_t moving_target_detection_distance;
     uint8_t stationary_target_detection_distance;
@@ -60,7 +61,7 @@ extern "C"
 
     esp_err_t xiao_mmwave_set_detection_distance(uint8_t gate, uint8_t times);
 
-    uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance);
+    uint8_t xiao_mmwave_calculate_detection_resolution(uint16_t distance);
 
     esp_err_t xiao_mmwave_set_bluettoth_state(bool enabled);
 

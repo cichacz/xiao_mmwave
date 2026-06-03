@@ -76,13 +76,13 @@ static uint8_t *send_command(const uint16_t command_word, uint8_t *data, size_t 
 
         return NULL;
     }
-    ESP_LOGI(TAG, "Command 0x%04X sent, waiting for response...", command_word);
+    ESP_LOGD(TAG, "Command 0x%04X sent, waiting for response...", command_word);
 
     // Clear any previous notification state.
     xTaskNotifyStateClear(NULL);
 
     uint32_t notification_value = 0;
-    BaseType_t ret = xTaskNotifyWait(0, 0, &notification_value, pdMS_TO_TICKS(1000));
+    BaseType_t ret = xTaskNotifyWait(0, 0, &notification_value, pdMS_TO_TICKS(2000));
 
     size_t data_size = (current_command.response[0] | (current_command.response[1] << 8)) - 2;
     uint16_t response_word = get_command_word(current_command.response);
@@ -94,8 +94,8 @@ static uint8_t *send_command(const uint16_t command_word, uint8_t *data, size_t 
         // get rid of size and command word
         memcpy(response, current_command.response + 4, data_size);
 
-        ESP_LOGI(TAG, "Received response (%" PRIuPTR " bytes):", data_size);
-        ESP_LOG_BUFFER_HEXDUMP(TAG, response, data_size, ESP_LOG_INFO);
+        ESP_LOGD(TAG, "Received response (%" PRIuPTR " bytes):", data_size);
+        ESP_LOG_BUFFER_HEXDUMP(TAG, response, data_size, ESP_LOG_DEBUG);
 
         memset(&current_command, 0, sizeof(current_command));
 
@@ -254,6 +254,26 @@ static esp_err_t set_detection_resolution(uint8_t resolution)
     return result;
 }
 
+static uint8_t get_detection_resolution()
+{
+    uint16_t command_word = 0xAB;
+    uint8_t command_value[] = {};
+
+    uint8_t *response = send_command(command_word, command_value, 0);
+    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
+    uint8_t resolution = response[2] == 0 ? 75 : 20;
+
+    free(response);
+
+    if (result != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to get detection resolution");
+        return 0;
+    }
+
+    return resolution;
+}
+
 /* Initialization functions */
 esp_err_t xiao_mmwave_init(StatusFunction_t cb)
 {
@@ -307,25 +327,12 @@ esp_err_t xiao_mmwave_set_detection_distance(uint8_t distance, uint8_t times)
     return result;
 }
 
-uint8_t xiao_mmwave_get_detection_resolution(uint16_t distance)
+uint8_t xiao_mmwave_calculate_detection_resolution(uint16_t distance)
 {
     ESP_LOGI(TAG, "Getting detection resolution...");
     ESP_RETURN_ON_ERROR(enable_config_mode(), TAG, "Failed to enter config mode");
 
-    uint16_t command_word = 0xAB;
-    uint8_t command_value[] = {};
-
-    uint8_t *response = send_command(command_word, command_value, 0);
-    esp_err_t result = response != NULL && response[0] == 0 ? ESP_OK : ESP_FAIL;
-    // FIXME make it prettier
-    uint8_t resolution = response[2] == 0 ? 75 : 20;
-    free(response);
-
-    if (result != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to get detection resolution");
-        return ESP_FAIL;
-    }
+    uint8_t resolution = get_detection_resolution();
 
     if (distance > 160 && resolution == 20)
     {
@@ -376,6 +383,8 @@ radar_config_t xiao_mmwave_get_configuration()
     config_data.unoccupied_duration = response[24] | (response[25] << 8);
 
     free(response);
+
+    config_data.detection_resolution = get_detection_resolution();
 
     if (disable_config_mode() != ESP_OK)
     {

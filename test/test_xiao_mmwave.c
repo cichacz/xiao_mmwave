@@ -111,7 +111,7 @@ TEST_CASE("test_xiao_mmwave_set_detection_distance", "[xiao_mmwave]")
     TEST_ASSERT_EQUAL(ESP_OK, xiao_mmwave_set_detection_distance(gate, times));
 }
 
-TEST_CASE("test_xiao_mmwave_get_detection_resolution_long_distance", "[xiao_mmwave]")
+TEST_CASE("test_xiao_mmwave_calculate_detection_resolution_long_distance", "[xiao_mmwave]")
 {
     // values from the documentation
     uint8_t get_detection_resolution_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xAB, 0x00, 0x04, 0x03, 0x02, 0x01};
@@ -125,10 +125,10 @@ TEST_CASE("test_xiao_mmwave_get_detection_resolution_long_distance", "[xiao_mmwa
     assert_uart_event(set_detection_resolution_frame, sizeof(set_detection_resolution_frame));
     assert_uart_event(disable_config_frame, sizeof(disable_config_frame));
 
-    TEST_ASSERT_EQUAL_UINT8(75, xiao_mmwave_get_detection_resolution(300));
+    TEST_ASSERT_EQUAL_UINT8(75, xiao_mmwave_calculate_detection_resolution(300));
 }
 
-TEST_CASE("test_xiao_mmwave_get_detection_resolution_short_distance", "[xiao_mmwave]")
+TEST_CASE("test_xiao_mmwave_calculate_detection_resolution_short_distance", "[xiao_mmwave]")
 {
     // values from the documentation
     uint8_t get_detection_resolution_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xAB, 0x00, 0x04, 0x03, 0x02, 0x01};
@@ -141,7 +141,7 @@ TEST_CASE("test_xiao_mmwave_get_detection_resolution_short_distance", "[xiao_mmw
     // no set here because we mocked device default value to be 0x01
     assert_uart_event(disable_config_frame, sizeof(disable_config_frame));
 
-    TEST_ASSERT_EQUAL_UINT8(20, xiao_mmwave_get_detection_resolution(100));
+    TEST_ASSERT_EQUAL_UINT8(20, xiao_mmwave_calculate_detection_resolution(100));
 }
 
 TEST_CASE("test_xiao_mmwave_set_bluettoth_state", "[xiao_mmwave]")
