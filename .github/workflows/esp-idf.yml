@@ -32,6 +32,6 @@ jobs:
           target: linux
           path: test_app
           command: |
-            idf.py set-target linux
+            idf.py --preview set-target linux
             idf.py build
             idf.py monitor
