@@ -2,10 +2,13 @@
 #include <inttypes.h>
 #include "xiao_mmwave.h"
 
+#include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "esp_check.h"
+
+#define UART_READ_TIMEOUT_TICKS ((uint32_t)portMAX_DELAY)
 
 typedef struct current_command_s
 {
@@ -126,7 +129,7 @@ static void uart_event_task(void *arg)
             case UART_DATA: // New data received
                 if (event.size > 0)
                 {
-                    uart_read_bytes(UART_PORT_NUM, data, event.size, portMAX_DELAY);
+                    uart_read_bytes(UART_PORT_NUM, data, event.size, UART_READ_TIMEOUT_TICKS);
 
                     if (memcmp(data, &data_prefix, 4) != 0 && memcmp(data, &config_prefix, 4) != 0)
                     {
@@ -285,7 +288,8 @@ esp_err_t xiao_mmwave_init(StatusFunction_t cb)
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     };
     ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE,
+                                 UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM, BUFFER_SIZE * 2, BUFFER_SIZE, 10, &uart_queue, 0));
 
     ESP_LOGI(TAG, "UART initialized successfuly");

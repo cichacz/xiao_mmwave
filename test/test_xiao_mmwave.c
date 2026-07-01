@@ -21,12 +21,12 @@ BaseType_t create_uart_queue_task(TaskFunction_t pxTaskCode, const char *const p
 BaseType_t queue_event_gen(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTicksToWait, int cmock_num_calls);
 BaseType_t prepare_for_command(UBaseType_t uxIndexToWaitOn, uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToClearOnExit, uint32_t *pulNotificationValue, TickType_t xTicksToWait, int cmock_num_calls);
 
-int config_data_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
-int detection_distance_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
-int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
-int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
-int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
-int radar_status_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls);
+int config_data_event_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
+int detection_distance_event_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
+int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
+int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
+int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
+int radar_status_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
 
 static const char *status_to_string(target_status_t status)
 {
@@ -72,12 +72,15 @@ TEST_CASE("test_xiao_mmwave_get_configuration", "[xiao_mmwave]")
 {
     // values from the documentation
     radar_config_t expected_radar_config = {
+        .detection_resolution = 20,
         .detection_distance = 8,
         .moving_target_detection_distance = 8,
         .stationary_target_detection_distance = 8,
         .moving_sensitivity = {0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14},
         .stationary_sensitivity = {0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19},
         .unoccupied_duration = 5};
+
+    uint8_t get_detection_resolution_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xAB, 0x00, 0x04, 0x03, 0x02, 0x01};
     uint8_t get_configuration_frame[] = {0xFD, 0xFC, 0xFB, 0xFA,
                                          0x02, 0x00, 0x61, 0x00,
                                          0x04, 0x03, 0x02, 0x01};
@@ -87,6 +90,7 @@ TEST_CASE("test_xiao_mmwave_get_configuration", "[xiao_mmwave]")
 
     assert_uart_event(enable_config_frame, sizeof(enable_config_frame));
     assert_uart_event(get_configuration_frame, sizeof(get_configuration_frame));
+    assert_uart_event(get_detection_resolution_frame, sizeof(get_detection_resolution_frame));
     assert_uart_event(disable_config_frame, sizeof(disable_config_frame));
 
     radar_config_t radar_config = xiao_mmwave_get_configuration();
@@ -171,7 +175,8 @@ void sensor_init(void)
     };
 
     uart_param_config_ExpectAndReturn(UART_NUM_1, &expected_config, ESP_OK);
-    uart_set_pin_ExpectAndReturn(UART_NUM_1, GPIO_NUM_21, GPIO_NUM_2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, ESP_OK);
+    _uart_set_pin6_ExpectAndReturn(UART_NUM_1, 21, 2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE,
+                                   UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, ESP_OK);
     uart_driver_install_ExpectAndReturn(UART_NUM_1, 512, 256, 10, &mock_queue, 0, ESP_OK);
     xQueueReceive_ExpectAnyArgsAndReturn(pdTRUE);
 
@@ -201,7 +206,7 @@ void assert_uart_event(uint8_t *frame_data, size_t frame_data_size)
     xTaskGetCurrentTaskHandle_ExpectAndReturn(task_handle);
     uart_write_bytes_ExpectAndReturn(UART_NUM_1, frame_data, frame_data_size, frame_data_size);
     xTaskGenericNotifyStateClear_ExpectAnyArgsAndReturn(pdTRUE);
-    xTaskGenericNotifyWait_ExpectAndReturn(tskDEFAULT_INDEX_TO_NOTIFY, 0, 0, &notification_value, pdMS_TO_TICKS(1000), pdTRUE);
+    xTaskGenericNotifyWait_ExpectAndReturn(tskDEFAULT_INDEX_TO_NOTIFY, 0, 0, &notification_value, pdMS_TO_TICKS(2000), pdTRUE);
     xTaskGenericNotify_ExpectAnyArgsAndReturn(pdTRUE);
 }
 
@@ -249,7 +254,7 @@ int config_exit_event_payload(void *buf)
     return sizeof(data);
 }
 
-int config_data_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, TickType_t ticks_to_wait, int cmock_num_calls)
+int config_data_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, uint32_t ticks_to_wait, int cmock_num_calls)
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
@@ -260,6 +265,18 @@ int config_data_event_payload(uart_port_t uart_num, void *buf, uint32_t event_nu
     }
 
     if (event_num == 3)
+    {
+        // we're getting detection distance too
+        uint8_t data[] = {0xFD, 0xFC, 0xFB, 0xFA,
+                          0x06, 0x00,
+                          0xAB, 0x01, 0x00, 0x00, 0x01, 0x00,
+                          0x04, 0x03, 0x02, 0x01};
+        memcpy(buf, &data, sizeof(data));
+
+        return sizeof(data);
+    }
+
+    if (event_num == 4)
     {
         return config_exit_event_payload(buf);
     }
@@ -277,7 +294,7 @@ int config_data_event_payload(uart_port_t uart_num, void *buf, uint32_t event_nu
     return sizeof(data);
 }
 
-int detection_distance_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, TickType_t ticks_to_wait, int cmock_num_calls)
+int detection_distance_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, uint32_t ticks_to_wait, int cmock_num_calls)
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
@@ -301,7 +318,7 @@ int detection_distance_event_payload(uart_port_t uart_num, void *buf, uint32_t e
     return sizeof(data);
 }
 
-int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, TickType_t ticks_to_wait, int cmock_num_calls)
+int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, uint32_t ticks_to_wait, int cmock_num_calls)
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
@@ -325,7 +342,7 @@ int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint
     return sizeof(data);
 }
 
-int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, TickType_t ticks_to_wait, int cmock_num_calls)
+int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, uint32_t ticks_to_wait, int cmock_num_calls)
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
@@ -361,7 +378,7 @@ int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, 
     return sizeof(data);
 }
 
-int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, TickType_t ticks_to_wait, int cmock_num_calls)
+int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num, uint32_t ticks_to_wait, int cmock_num_calls)
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
@@ -392,7 +409,7 @@ int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num,
     return sizeof(data);
 }
 
-int radar_status_payload(uart_port_t uart_num, void *buf, uint32_t length, TickType_t ticks_to_wait, int cmock_num_calls)
+int radar_status_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls)
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;

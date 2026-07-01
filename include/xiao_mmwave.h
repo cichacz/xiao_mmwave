@@ -1,16 +1,18 @@
-#include "driver/uart.h"
-#include "driver/gpio.h"
-
 #ifndef XIAO_MMWAVE_H
 #define XIAO_MMWAVE_H 1
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "esp_err.h"
 
 #define BUFFER_SIZE 256
 
 // UART port and configuration.
-#define UART_PORT_NUM UART_NUM_1
+#define UART_PORT_NUM 1
 #define UART_BAUD_RATE 115200
-#define UART_TX_PIN (GPIO_NUM_21)
-#define UART_RX_PIN (GPIO_NUM_2)
+#define UART_TX_PIN 21
+#define UART_RX_PIN 2
 
 #define SENSOR_MAX_GATE 8
 

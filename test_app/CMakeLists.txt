@@ -10,7 +10,7 @@ list(APPEND EXTRA_COMPONENT_DIRS "./mocks/soc/")
 list(APPEND EXTRA_COMPONENT_DIRS "./mocks/driver/")
 list(APPEND EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/tools/mocks/freertos/")
 
-# add_compile_definitions(SOC_CPU_CORES_NUM=1)
+add_compile_definitions(SOC_UART_WAKEUP_SUPPORT_ACTIVE_THRESH_MODE=1)
 add_compile_definitions(SOC_UART_NUM=2)
 add_compile_definitions(CONFIG_MMU_PAGE_SIZE=64)
 
