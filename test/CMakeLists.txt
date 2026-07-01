@@ -1,4 +1,4 @@
 idf_component_register(
     SRC_DIRS "."
     INCLUDE_DIRS "." "../include"
-    PRIV_REQUIRES unity driver)
+    PRIV_REQUIRES freertos unity driver)

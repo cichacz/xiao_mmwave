@@ -2,10 +2,13 @@
 #include <inttypes.h>
 #include "xiao_mmwave.h"
 
+#include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "esp_check.h"
+
+#define UART_READ_TIMEOUT_TICKS ((uint32_t)portMAX_DELAY)
 
 typedef struct current_command_s
 {
@@ -126,7 +129,7 @@ static void uart_event_task(void *arg)
             case UART_DATA: // New data received
                 if (event.size > 0)
                 {
-                    uart_read_bytes(UART_PORT_NUM, data, event.size, portMAX_DELAY);
+                    uart_read_bytes(UART_PORT_NUM, data, event.size, UART_READ_TIMEOUT_TICKS);
 
                     if (memcmp(data, &data_prefix, 4) != 0 && memcmp(data, &config_prefix, 4) != 0)
                     {

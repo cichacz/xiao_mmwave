@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -32,6 +32,6 @@ jobs:
           target: linux
           path: test_app
           command: |
-            idf.py set-target linux
+            idf.py --preview set-target linux
             idf.py build
-            idf.py monitor
+            ./build/test_app.elf

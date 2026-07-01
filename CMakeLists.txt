@@ -10,5 +10,10 @@ else()
 
 endif()
 
-idf_component_register(SRCS "src/xiao_mmwave.c" INCLUDE_DIRS "include"
-                       PRIV_REQUIRES ${IDF_DRIVER_REQUIRES})
+idf_component_register(
+  SRCS
+  "src/xiao_mmwave.c"
+  INCLUDE_DIRS
+  "include"
+  PRIV_REQUIRES
+  ${IDF_DRIVER_REQUIRES})
