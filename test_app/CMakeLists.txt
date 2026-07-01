@@ -9,6 +9,9 @@ list(APPEND EXTRA_COMPONENT_DIRS "./mocks/soc/")
 list(APPEND EXTRA_COMPONENT_DIRS "./mocks/driver/")
 list(APPEND EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/tools/mocks/freertos/")
 
+include($ENV{IDF_PATH}/tools/cmake/version.cmake)
+message(STATUS "Building test_app with ESP-IDF ${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}.${IDF_VERSION_PATCH}")
+
 if("${IDF_VERSION_MAJOR}" VERSION_EQUAL "5" AND "${IDF_VERSION_MINOR}" VERSION_EQUAL "4")
 
   add_compile_definitions(SOC_CPU_CORES_NUM=1)
