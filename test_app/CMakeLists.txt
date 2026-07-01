@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.16)
 # Include the components directory of the main application:
 #
 set(EXTRA_COMPONENT_DIRS "../")
-set(CMAKE_HOST_SYSTEM_NAME "Darwin")
 
 list(APPEND EXTRA_COMPONENT_DIRS "./mocks/soc/")
 list(APPEND EXTRA_COMPONENT_DIRS "./mocks/driver/")
