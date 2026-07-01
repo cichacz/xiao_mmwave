@@ -6,6 +6,7 @@
 #include "Mocktask.h"
 #include "Mockidf_additions.h"
 
+#include "esp_idf_version.h"
 #include "xiao_mmwave.h"
 
 #define TEST_MEMORY_LEAK_THRESHOLD (500)
@@ -170,8 +171,12 @@ void sensor_init(void)
     };
 
     uart_param_config_ExpectAndReturn(UART_NUM_1, &expected_config, ESP_OK);
+#if ESP_IDF_VERSION_MAJOR >= 6
     _uart_set_pin6_ExpectAndReturn(UART_NUM_1, 21, 2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE,
                                    UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, ESP_OK);
+#else
+    uart_set_pin_ExpectAndReturn(UART_NUM_1, 21, 2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, ESP_OK);
+#endif
     uart_driver_install_ExpectAndReturn(UART_NUM_1, 512, 256, 10, &mock_queue, 0, ESP_OK);
     xQueueReceive_ExpectAnyArgsAndReturn(pdTRUE);
 
