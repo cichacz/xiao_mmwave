@@ -28,23 +28,6 @@ int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint
 int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
 int radar_status_payload(uart_port_t uart_num, void *buf, uint32_t length, uint32_t ticks_to_wait, int cmock_num_calls);
 
-static const char *status_to_string(target_status_t status)
-{
-    switch (status)
-    {
-    case TARGET_NO_TARGET:
-        return "NO_TARGET";
-    case TARGET_BOTH_TARGETS:
-        return "BOTH_TARGETS";
-    case TARGET_MOVING_TARGET:
-        return "MOVING_TARGET";
-    case TARGET_STATIONARY_TARGET:
-        return "STATIC_TARGET";
-    default:
-        return "ERROR_FRAME";
-    }
-}
-
 void setUp(void)
 {
     // we use it to track number of events in each test

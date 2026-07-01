@@ -34,4 +34,4 @@ jobs:
           command: |
             idf.py --preview set-target linux
             idf.py build
-            idf.py monitor
+            ./build/test_app.elf

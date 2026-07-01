@@ -18,7 +18,5 @@ int main()
 {
     UNITY_BEGIN();
     unity_run_all_tests();
-    UNITY_END();
-
-    unity_run_menu();
+    return UNITY_END();
 }
