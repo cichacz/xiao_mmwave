@@ -1,11 +1,14 @@
 #include <string.h>
 #include "unity.h"
+#include "unity_test_utils_memory.h"
 #include "Mockuart.h"
 #include "Mockqueue.h"
 #include "Mocktask.h"
 #include "Mockidf_additions.h"
 
 #include "xiao_mmwave.h"
+
+#define TEST_MEMORY_LEAK_THRESHOLD (500)
 
 QueueHandle_t mock_queue;
 TaskHandle_t task_handle;
@@ -30,10 +33,17 @@ int radar_status_payload(uart_port_t uart_num, void *buf, uint32_t length, uint3
 
 void setUp(void)
 {
+    unity_utils_record_free_mem();
+
     // we use it to track number of events in each test
     event.size = 0;
     xTaskCreatePinnedToCore_Stub(create_uart_queue_task);
     xQueueReceive_Stub(queue_event_gen);
+}
+
+void tearDown(void)
+{
+    unity_utils_evaluate_leaks_direct(TEST_MEMORY_LEAK_THRESHOLD);
 }
 
 TEST_CASE("test_sensor_init", "[xiao_mmwave]")
