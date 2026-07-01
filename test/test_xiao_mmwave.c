@@ -13,6 +13,8 @@
 QueueHandle_t mock_queue;
 TaskHandle_t task_handle;
 uart_event_t event;
+static int mock_task_handle_storage;
+static uint32_t mock_uart_read_event_num;
 
 static uint8_t enable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
 static uint8_t disable_config_frame[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
@@ -35,8 +37,8 @@ void setUp(void)
 {
     unity_utils_record_free_mem();
 
-    // we use it to track number of events in each test
-    event.size = 0;
+    event.size = BUFFER_SIZE;
+    mock_uart_read_event_num = 0;
     xTaskCreatePinnedToCore_Stub(create_uart_queue_task);
     xQueueReceive_Stub(queue_event_gen);
 }
@@ -193,13 +195,13 @@ void sensor_driver_value_update(radar_status_t *status)
 void assert_uart_event(uint8_t *frame_data, size_t frame_data_size)
 {
     uint32_t notification_value = 0;
-    // anything except NULL
-    task_handle = malloc(1);
+    task_handle = (TaskHandle_t)&mock_task_handle_storage;
 
     xTaskGetCurrentTaskHandle_ExpectAndReturn(task_handle);
     uart_write_bytes_ExpectAndReturn(UART_NUM_1, frame_data, frame_data_size, frame_data_size);
     xTaskGenericNotifyStateClear_ExpectAnyArgsAndReturn(pdTRUE);
     xTaskGenericNotifyWait_ExpectAndReturn(tskDEFAULT_INDEX_TO_NOTIFY, 0, 0, &notification_value, pdMS_TO_TICKS(2000), pdTRUE);
+    xTaskGenericNotifyWait_IgnoreArg_pulNotificationValue();
     xTaskGenericNotify_ExpectAnyArgsAndReturn(pdTRUE);
 }
 
@@ -219,7 +221,7 @@ BaseType_t queue_event_gen(QueueHandle_t xQueue, void *const pvBuffer, TickType_
 BaseType_t prepare_for_command(UBaseType_t uxIndexToWaitOn, uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToClearOnExit, uint32_t *pulNotificationValue, TickType_t xTicksToWait, int cmock_num_calls)
 {
     event.type = UART_DATA;
-    event.size++;
+    event.size = BUFFER_SIZE;
     sensor_init();
 
     return pdTRUE;
@@ -251,6 +253,7 @@ int config_data_event_payload(uart_port_t uart_num, void *buf, uint32_t event_nu
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
+    event_num = ++mock_uart_read_event_num;
 
     if (event_num == 1)
     {
@@ -291,6 +294,7 @@ int detection_distance_event_payload(uart_port_t uart_num, void *buf, uint32_t e
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
+    event_num = ++mock_uart_read_event_num;
 
     if (event_num == 1)
     {
@@ -315,6 +319,7 @@ int detection_resolution_get_event_payload(uart_port_t uart_num, void *buf, uint
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
+    event_num = ++mock_uart_read_event_num;
 
     if (event_num == 1)
     {
@@ -339,6 +344,7 @@ int detection_resolution_get_set_event_payload(uart_port_t uart_num, void *buf, 
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
+    event_num = ++mock_uart_read_event_num;
 
     if (event_num == 1)
     {
@@ -375,6 +381,7 @@ int bluetooth_event_payload(uart_port_t uart_num, void *buf, uint32_t event_num,
 {
     // after each response we have to break loop and start it again before next request
     event.type = UART_BREAK;
+    event_num = ++mock_uart_read_event_num;
 
     if (event_num == 1)
     {
